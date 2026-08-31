@@ -170,7 +170,26 @@ SIM.UI = {
                 view.loadGear(type);
         });
 
-        view.tcontainer.on('click', 'table.gear td:not(.ppm)', function(e) {
+        view.tcontainer.on('click', 'table.gear td.bag', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var table = $(this).parents('table');
+            var type = table.data('type');
+            var tr = $(this).parent();
+            var cell = $(this);
+            for (let item of gear[type]) {
+                if (item.id == tr.data('id')) {
+                    item.owned = !item.owned;
+                    cell.toggleClass('owned', item.owned);
+                    tr.toggleClass('inbags', item.owned);
+                }
+            }
+            let count = gear[type].filter(i => i.owned).length;
+            view.tcontainer.find('#filter_owned .count').text(count ? ` (${count})` : '');
+            view.updateSession();
+        });
+
+        view.tcontainer.on('click', 'table.gear td:not(.ppm):not(.bag)', function(e) {
             e.preventDefault();
             var table = $(this).parents('table');
             var type = table.data('type');
@@ -797,6 +816,7 @@ SIM.UI = {
         obj.filter_green = view.main.find('#filter_green').hasClass('active');
         obj.filter_blue = view.main.find('#filter_blue').hasClass('active');
         obj.filter_epic = view.main.find('#filter_epic').hasClass('active');
+        obj.filter_owned = globalThis.filter_owned === true;
         obj.bleedreduction = view.fight.find('select[name="bleedreduction"]').val();
         obj.spellqueueing = view.fight.find('select[name="spellqueueing"]').val();
         
@@ -818,7 +838,7 @@ SIM.UI = {
         for (let type in gear) {
             _gear[type] = [];
             for (let item of gear[type]) {
-                _gear[type].push({id:item.id,selected:item.selected,dps:item.dps,hidden:item.hidden});
+                _gear[type].push({id:item.id,selected:item.selected,dps:item.dps,hidden:item.hidden,owned:item.owned});
             }
         }
 
@@ -867,6 +887,7 @@ SIM.UI = {
         if (typeof storage.filter_green == 'undefined') storage.filter_green = true;
         if (typeof storage.filter_blue == 'undefined') storage.filter_blue = true;
         if (typeof storage.filter_epic == 'undefined') storage.filter_epic = true;
+        if (typeof storage.filter_owned == 'undefined') storage.filter_owned = false;
         globalThis.profilename = storage.profilename;
         globalThis.filter_strength = storage.filter_strength;
         globalThis.filter_bear = storage.filter_bear;
@@ -875,6 +896,7 @@ SIM.UI = {
         globalThis.filter_green = storage.filter_green;
         globalThis.filter_blue = storage.filter_blue;
         globalThis.filter_epic = storage.filter_epic;
+        globalThis.filter_owned = storage.filter_owned;
 
         if (storage.targetbasearmor === 3731 || storage.targetbasearmor === null)
             storage.targetbasearmor = 3128;
@@ -927,7 +949,7 @@ SIM.UI = {
     filterGear: function () {
         var view = this;
         var type = view.main.find('nav > ul > li.active').data('type');
-        if (type == "mainhand" || type == "offhand")
+        if (type == "mainhand" || type == "offhand" || type == "twohand")
             view.loadWeapons(type);
         else if (type == "custom")
             view.loadCustom();
@@ -946,6 +968,7 @@ SIM.UI = {
         let table = `<table class="gear ${editmode ? 'editmode' : ''}" data-type="${type}" data-max="1">
                         <thead>
                             <tr>
+                                <th class="bag"></th>
                                 ${editmode ? '<th></th>' : ''}
                                 <th>ilvl</th>
                                 <th>Name</th>
@@ -1023,6 +1046,7 @@ SIM.UI = {
             }
 
             if (item.hidden && !editmode) continue;
+            if (globalThis.filter_owned === true && !item.owned && !item.selected) continue;
 
             let tooltip = item.id.toString().split('|')[0], rand = '';
             if (tooltip == 199211) tooltip = 19921;
@@ -1041,7 +1065,8 @@ SIM.UI = {
                 if (item.resist.arcane) resist += (resist.length ? ' + ' : '') + item.resist.arcane + ' AR';
             }
 
-            table += `<tr data-id="${item.id}" data-name="${item.name}" class="${item.selected ? 'active' : ''} ${item.hidden ? 'hidden' : ''}">
+            table += `<tr data-id="${item.id}" data-name="${item.name}" class="${item.selected ? 'active' : ''} ${item.hidden ? 'hidden' : ''} ${item.owned ? 'inbags' : ''}">
+                        <td class="bag ${item.owned ? 'owned' : ''}">${bagsvg}</td>
                         ${editmode ? '<td class="hide">' + (item.hidden ? eyesvghidden : eyesvg) + '</td>' : ''}
                         <td data-quality="${item.q}"><a href="${WEB_DB_URL}item=${tooltip}${rand}"></a>${item.i}</td>
                         <td>${item.name}</td>`
@@ -1076,6 +1101,7 @@ SIM.UI = {
                 <label id="filter_green" class="${globalThis.filter_green ? 'active' : ''}">Greens</label>
                 <label id="filter_blue" class="${globalThis.filter_blue ? 'active' : ''}">Blues</label>
                 <label id="filter_epic" class="${globalThis.filter_epic ? 'active' : ''}">Epics</label>
+                <label id="filter_owned" class="filter-owned ${globalThis.filter_owned ? 'active' : ''}">${bagsvg}Owned<span class="count">${(n => n ? ` (${n})` : '')(gear[type].filter(i => i.owned).length)}</span></label>
             </div>
         </div>`);
         view.tcontainer.append(table);
@@ -1084,7 +1110,7 @@ SIM.UI = {
             widthFixed: false,
             sortList: editmode ?  [[dpsrow, 1],[2, 0]] : [[dpsrow-1, 1],[1, 0]],
             textSorter : {
-                15 : function(a, b, direction, column, table) {
+                [dpsrow-1] : function(a, b, direction, column, table) {
                     var a = parseFloat(a.substring(0,a.indexOf('.') + 3));
                     var b = parseFloat(b.substring(0,b.indexOf('.') + 3));
                     if (isNaN(a)) a = 0;
@@ -1093,7 +1119,8 @@ SIM.UI = {
                 },
             },
             headers: {
-                15: { sorter: "text" }
+                0: { sorter: false },
+                [dpsrow-1]: { sorter: "text" }
             }
         });
 
@@ -1122,6 +1149,7 @@ SIM.UI = {
         let table = `<table class="gear ${editmode ? 'editmode' : ''}" data-type="${type}" data-max="${max}">
                         <thead>
                             <tr>
+                                <th class="bag"></th>
                                 ${editmode ? '<th></th>' : ''}
                                 <th>ilvl</th>
                                 <th>Name</th>
@@ -1173,6 +1201,7 @@ SIM.UI = {
                 ((phase && !view.filter.find('.phases [data-id="' + phase + '"]').hasClass('active')) ||
                 (source && !view.filter.find('.sources [data-id="' + source + '"]').hasClass('active'))))
                 item.selected = false;
+            if (globalThis.filter_owned === true && !item.owned && !item.selected) continue;
 
             if (phase && !view.filter.find('.phases [data-id="' + phase + '"]').hasClass('active'))
                 continue;
@@ -1203,7 +1232,8 @@ SIM.UI = {
                 if (item.resist.arcane) resist += (resist.length ? ' + ' : '') + item.resist.arcane + ' AR';
             }
 
-            table += `<tr data-id="${item.id}" class="${item.selected ? 'active' : ''} ${item.hidden ? 'hidden' : ''}">
+            table += `<tr data-id="${item.id}" class="${item.selected ? 'active' : ''} ${item.hidden ? 'hidden' : ''} ${item.owned ? 'inbags' : ''}">
+                        <td class="bag ${item.owned ? 'owned' : ''}">${bagsvg}</td>
                         ${editmode ? '<td class="hide">' + (item.hidden ? eyesvghidden : eyesvg) + '</td>' : ''}
                         <td data-quality="${item.q}"><a href="${WEB_DB_URL}item=${tooltip}${rand}"></a>${item.i}</td>
                         <td>${item.name}</td>`
@@ -1235,6 +1265,7 @@ SIM.UI = {
                 <label id="filter_green" class="${globalThis.filter_green ? 'active' : ''}">Greens</label>
                 <label id="filter_blue" class="${globalThis.filter_blue ? 'active' : ''}">Blues</label>
                 <label id="filter_epic" class="${globalThis.filter_epic ? 'active' : ''}">Epics</label>
+                <label id="filter_owned" class="filter-owned ${globalThis.filter_owned ? 'active' : ''}">${bagsvg}Owned<span class="count">${(n => n ? ` (${n})` : '')(gear[type].filter(i => i.owned).length)}</span></label>
             </div>
         </div>`);
         view.tcontainer.append(table);
@@ -1243,7 +1274,7 @@ SIM.UI = {
             widthFixed: false,
             sortList: editmode ? [[dpsrow, 1],[2, 0]] : [[dpsrow-1, 1],[1, 0]],
             textSorter : {
-                12 : function(a, b, direction, column, table) {
+                [dpsrow-1] : function(a, b, direction, column, table) {
                     var a = parseFloat(a.substring(0,a.indexOf('.') + 3));
                     var b = parseFloat(b.substring(0,b.indexOf('.') + 3));
                     if (isNaN(a)) a = 0;
@@ -1252,7 +1283,8 @@ SIM.UI = {
                 },
             },
             headers: {
-                12: { sorter: "text" }
+                0: { sorter: false },
+                [dpsrow-1]: { sorter: "text" }
             }
         });
 
@@ -1430,6 +1462,7 @@ SIM.UI = {
 
 };
 
+var bagsvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path d="M18 6h-2c0-2.206-1.794-4-4-4S8 3.794 8 6H6c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2V8c0-1.103-.897-2-2-2zm-6-2c1.103 0 2 .897 2 2h-4c0-1.103.897-2 2-2zm-3 6c-.552 0-1-.448-1-1V8h2v1c0 .552-.448 1-1 1zm6 0c-.552 0-1-.448-1-1V8h2v1c0 .552-.448 1-1 1z"/></svg>';
 var eyesvg = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M15 12c0 1.654-1.346 3-3 3s-3-1.346-3-3 1.346-3 3-3 3 1.346 3 3zm9-.449s-4.252 8.449-11.985 8.449c-7.18 0-12.015-8.449-12.015-8.449s4.446-7.551 12.015-7.551c7.694 0 11.985 7.551 11.985 7.551zm-7 .449c0-2.757-2.243-5-5-5s-5 2.243-5 5 2.243 5 5 5 5-2.243 5-5z"/></svg>';
 var eyesvghidden = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M11.885 14.988l3.104-3.098.011.11c0 1.654-1.346 3-3 3l-.115-.012zm8.048-8.032l-3.274 3.268c.212.554.341 1.149.341 1.776 0 2.757-2.243 5-5 5-.631 0-1.229-.13-1.785-.344l-2.377 2.372c1.276.588 2.671.972 4.177.972 7.733 0 11.985-8.449 11.985-8.449s-1.415-2.478-4.067-4.595zm1.431-3.536l-18.619 18.58-1.382-1.422 3.455-3.447c-3.022-2.45-4.818-5.58-4.818-5.58s4.446-7.551 12.015-7.551c1.825 0 3.456.426 4.886 1.075l3.081-3.075 1.382 1.42zm-13.751 10.922l1.519-1.515c-.077-.264-.132-.538-.132-.827 0-1.654 1.346-3 3-3 .291 0 .567.055.833.134l1.518-1.515c-.704-.382-1.496-.619-2.351-.619-2.757 0-5 2.243-5 5 0 .852.235 1.641.613 2.342z"/></svg>';
 var searchSVG = '<svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 50 50" width="20px" height="20px"><path d="M 21 3 C 11.621094 3 4 10.621094 4 20 C 4 29.378906 11.621094 37 21 37 C 24.710938 37 28.140625 35.804688 30.9375 33.78125 L 44.09375 46.90625 L 46.90625 44.09375 L 33.90625 31.0625 C 36.460938 28.085938 38 24.222656 38 20 C 38 10.621094 30.378906 3 21 3 Z M 21 5 C 29.296875 5 36 11.703125 36 20 C 36 28.296875 29.296875 35 21 35 C 12.703125 35 6 28.296875 6 20 C 6 11.703125 12.703125 5 21 5 Z"/></svg>';

@@ -8,6 +8,7 @@ function getGlobalsDelta() {
                 dps: item.dps,
                 selected: item.selected,
                 hidden: item.hidden,
+                owned: item.owned,
             }
         });
     }
@@ -66,6 +67,7 @@ function updateGlobals(params) {
                         j.dps = i.dps;
                         j.selected = i.selected;
                         j.hidden = i.hidden;
+                        j.owned = i.owned;
                     }
                 }
 

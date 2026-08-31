@@ -198,10 +198,6 @@ section.main {
         }
     }
 
-    table.runes {
-        cursor: pointer;
-    }
-
     progress {
         width: 80%;
         max-width: calc(100% - 320px);
@@ -225,6 +221,45 @@ section.main {
             height: 15px;
             fill: #ddd;
             vertical-align: middle;
+        }
+    }
+
+    td.bag, th.bag {
+        width: 24px;
+        min-width: 24px;
+        cursor: pointer;
+        svg {
+            width: 14px;
+            height: 14px;
+            fill: #555;
+            vertical-align: middle;
+            transition: fill 0.15s;
+        }
+        &:hover svg {
+            fill: #999;
+        }
+        &.owned svg {
+            fill: #ffcd45;
+        }
+        &.owned:hover svg {
+            fill: #ffe28a;
+        }
+    }
+
+    tr.inbags td:not(.bag) {
+        text-shadow: 0 0 1px rgba(255, 205, 69, 0.25);
+    }
+
+    .filters label.filter-owned {
+        svg {
+            width: 14px;
+            height: 14px;
+            fill: #ffcd45;
+            margin-right: 4px;
+        }
+        .count {
+            color: #ffcd45;
+            margin-left: 2px;
         }
     }
 
@@ -258,29 +293,6 @@ section.main {
         }
     }
 
-    .runes {
-        display: flex;
-        justify-content: left;
-        align-items: center;
-        flex-wrap: wrap;
-        margin-bottom: 20px;
-
-        label {
-            text-align: center;
-            font-weight: bold;
-            margin-right: 10px;
-            margin-left: 4px;
-        }
-
-        .active .icon {
-            border-color: #ffcd45;
-            img {
-                filter: none;
-            }
-        }
-    }
-
-    
     .search {
         position: relative;
         width: 222px;
