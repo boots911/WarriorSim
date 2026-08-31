@@ -32,6 +32,7 @@
   <script type="text/javascript" src="dist/js/profiles.min.js"></script>
   <script type="text/javascript" src="dist/js/stats.min.js"></script>
   <script type="text/javascript" src="dist/js/ui.min.js"></script>
+  <script type="text/javascript" src="dist/js/optimizer.min.js"></script>
 
   <script>var whTooltips = { colorLinks: true, iconizeLinks: false, renameLinks: false, "hide": { "ilvl": false } };</script>
   <script src="https://wow.zamimg.com/widgets/power.js"></script>
@@ -135,6 +136,7 @@
       <a href="#" class="btn js-dps">DPS</a>
       <a href="#" class="btn js-weights">STAT WEIGHTS</a>
       <a href="#" class="btn js-table">SHEET DPS</a>
+      <a href="#" class="btn js-optimizer">BEST SETS</a>
       <a href="#" class="btn js-stats disabled">STATS</a>
       <a href="#" class="btn js-settings">SETTINGS</a>
       <a href="#" class="btn js-profiles">PROFILES</a>
@@ -360,6 +362,26 @@
     </div>
   </section>
 
+  <section class="optimizer">
+    <a href="#" class="btn-close"></a>
+    <div class="wrapper">
+      <article class="bestsets">
+        <label class="active">Best Sets From Bags</label>
+        <p class="opt-intro">Mark every item you own with the bag icon in the gear tables, then run the optimizer.
+        It sims all viable combinations of your owned gear &mdash; including set bonuses, procs and on-use items &mdash;
+        and shows the three highest-DPS sets. On-use trinkets are used with their rotation timing settings
+        (defaulting to "use before the fight ends" when unset).</p>
+        <div class="opt-controls">
+          <a href="#" class="btn js-run-optimizer">FIND BEST SETS</a>
+          <a href="#" class="btn js-cancel-optimizer" style="display:none">CANCEL</a>
+          <span class="opt-status"></span>
+        </div>
+        <div class="opt-progress"><div class="opt-progress-bar"></div></div>
+        <div class="opt-results"></div>
+      </article>
+    </div>
+  </section>
+
   <section class="stats">
     <a href="#" class="btn-close"></a>
     <div class="wrapper">
@@ -534,6 +556,7 @@
       SIM.SETTINGS.init();
       SIM.STATS.init();
       SIM.PROFILES.init();
+      SIM.OPTIMIZER.init();
     });
   </script>
 

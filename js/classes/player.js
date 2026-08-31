@@ -55,6 +55,7 @@ class Player {
         this.mode = config.mode;
         this.bleedmod = parseFloat(this.target.bleedreduction);
         this.spellqueueing = config.spellqueueing;
+        this.autoitemspells = config.autoitemspells;
         this.target.misschance = this.getTargetSpellMiss();
         this.target.mitigation = this.getTargetSpellMitigation();
         this.target.binaryresist = this.getTargetSpellBinaryResist();
@@ -577,7 +578,7 @@ class Player {
     addSpells(testItem) {
         this.preporder = [];
         for (let spell of spells) {
-            if (spell.item && this.items.includes(spell.id) && spell.id == testItem && spell.id == testItem && !spell.timetoendactive && !spell.timetostartactive) {
+            if (spell.item && this.items.includes(spell.id) && (spell.id == testItem || this.autoitemspells) && !spell.timetoendactive && !spell.timetostartactive) {
                 // Blademasters Fury
                 if (spell.id == 219223) spell.active = true;
                 else spell.timetoendactive = true;

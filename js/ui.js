@@ -48,8 +48,10 @@ SIM.UI = {
             $('section.settings').toggleClass('active');
             view.sidebar.find('.js-stats').removeClass('active');
             view.sidebar.find('.js-profiles').removeClass('active');
+            view.sidebar.find('.js-optimizer').removeClass('active');
             $('section.stats').removeClass('active');
             $('section.profiles').removeClass('active');
+            $('section.optimizer').removeClass('active');
             view.body.removeClass('sidebar-mobile-open');
         });
 
@@ -61,8 +63,10 @@ SIM.UI = {
             $('section.profiles').toggleClass('active');
             view.sidebar.find('.js-stats').removeClass('active');
             view.sidebar.find('.js-settings').removeClass('active');
+            view.sidebar.find('.js-optimizer').removeClass('active');
             $('section.stats').removeClass('active');
             $('section.settings').removeClass('active');
+            $('section.optimizer').removeClass('active');
             view.body.removeClass('sidebar-mobile-open');
             SIM.PROFILES.buildProfiles();
         });
@@ -89,8 +93,10 @@ SIM.UI = {
             $('section.stats').toggleClass('active');
             view.sidebar.find('.js-settings').removeClass('active');
             view.sidebar.find('.js-profiles').removeClass('active');
+            view.sidebar.find('.js-optimizer').removeClass('active');
             $('section.settings').removeClass('active');
             $('section.profiles').removeClass('active');
+            $('section.optimizer').removeClass('active');
             view.body.removeClass('sidebar-mobile-open');
         });
 

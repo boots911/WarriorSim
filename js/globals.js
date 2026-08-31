@@ -94,3 +94,18 @@ function updateGlobals(params) {
 
     delete gear["custom"];
 }
+
+// Set the equipped gear from a {slot: [itemids]} map, clearing everything else.
+function applyGearMap(map) {
+    for (let type in gear)
+        for (let item of gear[type])
+            if (item.selected) item.selected = false;
+    for (let type in map) {
+        if (!gear[type] || !map[type]) continue;
+        for (let id of map[type]) {
+            if (id === null || id === undefined) continue;
+            for (let item of gear[type])
+                if (item.id == id) item.selected = true;
+        }
+    }
+}
