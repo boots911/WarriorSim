@@ -142,17 +142,15 @@ class Player {
         this.addSets();
         this.addEnchants();
         this.addTempEnchants();
-        this.preAddRunes();
         this.addBuffs();
         this.addSpells(testItem);
         this.sortSpells();
-        this.addRunes();
         this.setSkills();
         if (this.talents.flurry) this.auras.flurry = new Flurry(this);
-        if (this.talents.deepwounds) this.auras.deepwounds = this.mode == "sod" ? new DeepWounds(this) : new OldDeepWounds(this);
+        if (this.talents.deepwounds) this.auras.deepwounds = new OldDeepWounds(this);
         if (this.adjacent && this.talents.deepwounds) {
             for (let i = 2; i <= (this.adjacent + 1); i++)
-                this.auras['deepwounds' + i] = this.mode == "sod" ? new DeepWounds(this, null, i) : new OldDeepWounds(this, null, i);
+                this.auras['deepwounds' + i] = new OldDeepWounds(this, null, i);
         }
 
         this.spells.stanceswitch = new StanceSwitch(this);
@@ -406,80 +404,6 @@ class Player {
             }
         }
     }
-    preAddRunes() {
-        if (typeof runes === "undefined") return;
-        for (let type in runes) {
-            for (let item of runes[type]) {
-                if (item.selected) {
-                    if (item.focusedrage) {
-                        this.ragecostbonus = 3;
-                    }
-                    if (item.precisetiming) {
-                        this.precisetiming = item.precisetiming;
-                    }
-                }
-            }
-        }
-    }
-    addRunes() {
-        if (typeof runes === "undefined") return;
-        for (let type in runes) {
-            for (let item of runes[type]) {
-                if (item.selected) {
-                    // Blood Frenzy
-                    if (item.bloodfrenzy) {
-                        this.bloodfrenzy = item.bloodfrenzy;
-                    }
-                    // Endless Rage
-                    if (item.ragemod) {
-                        this.base.ragemod = (this.base.ragemod || 1) * item.ragemod;
-                    }
-                    // Frenzied Assault
-                    if (item.haste2h && this.mh.twohand) {
-                        this.base.haste *= (1 + item.haste2h / 100) || 1;
-                        this.extrarage = 2;
-                        this.extracritrage = 4;
-                    }
-                    if (item.furiousthunder) {
-                        this.furiousthunder = item.furiousthunder;
-                    }
-                    if (item.dmgdw && this.oh) {
-                        this.base.dmgmod *= (1 + item.dmgdw / 100) || 1;
-                    }
-                    if (item.devastate) {
-                        this.devastate = item.devastate;
-                    }
-                    if (item.bloodsurge) {
-                        this.bloodsurge = item.bloodsurge;
-                    }
-                    if (item.swordboard) {
-                        this.swordboard = item.swordboard;
-                    }
-                    if (item.wreckingcrew) {
-                        this.wreckingcrew = item.wreckingcrew;
-                        this.auras.wreckingcrew = new WreckingCrew(this);
-                    }
-                    if (item.dmgshield && this.shield) {
-                        this.base.dmgmod *= (1 + item.dmgshield / 100) || 1;
-                    }
-                    if (item.tasteforblood) {
-                        this.tasteforblood = item.tasteforblood;
-                    }
-                    if (item.freshmeat) {
-                        this.freshmeat = item.freshmeat;
-                        this.auras.freshmeat = new FreshMeat(this);
-                    }
-                    if (item.suddendeath) {
-                        this.suddendeath = item.suddendeath;
-                        this.auras.suddendeath = new SuddenDeath(this);
-                    }
-                    if (item.singleminded) {
-                        this.auras.singleminded = new SingleMinded(this);
-                    }
-                }
-            }
-        }
-    }
     addSets() {
         for (let set of sets) {
             let counter = 0;
@@ -597,9 +521,6 @@ class Player {
                     if (buff.stance == 'glad' && this.gladdmg && this.shield)
                         this.base.dmgmod *= (1 + this.gladdmg / 100);
                     continue;
-                }
-                if (buff.group == "trueshot" && this.mode == "sod") {
-                    buff.ap = buff.apsod;
                 }
                 if (buff.dodge) {
                     this.target.dodge += buff.dodge;
@@ -1491,8 +1412,6 @@ class Player {
         if (spell instanceof ThunderClap) return 0;
         if (spell instanceof ShieldSlam) {
             if (result != RESULT.MISS && result != RESULT.DODGE) {
-                if (this.mode == "sod") this.auras.defendersresolve.use();
-
                 // procs at least windfury - more info needed
                 if (weapon.windfury && !this.auras.windfury.timer && !damageSoFar && rng10k() < 2000) {
                     weapon.windfury.use();

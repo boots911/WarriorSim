@@ -14,7 +14,6 @@ SIM.PROFILES = {
         view.body = $('body');
         view.section = view.body.find('section.profiles');
         view.container = view.section.find('.container');
-        view.presets = view.section.find('.presets');
         view.close = view.section.find('.btn-close');
         view.modal = view.body.find('.import-modal');
         view.textarea = view.modal.find('textarea');
@@ -47,41 +46,6 @@ SIM.PROFILES = {
             view.modal.addClass('open');
             view.textarea.focus();
         });
-
-        view.presets.on('click','.import-thbwl', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            let index = view.container.find('.profile').last().data('index') + 1;
-            view.importProfile(preset_thbwl, index);
-        });
-
-        view.presets.on('click','.import-dwbwl', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            let index = view.container.find('.profile').last().data('index') + 1;
-            view.importProfile(preset_dwbwl, index);
-        });
-
-        view.presets.on('click','.import-thaq', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            let index = view.container.find('.profile').last().data('index') + 1;
-            view.importProfile(preset_thaq, index);
-        });
-
-        view.presets.on('click','.import-dwaq', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            let index = view.container.find('.profile').last().data('index') + 1;
-            view.importProfile(preset_dwaq, index);
-        });
-
-        // view.presets.on('click','.import-fr', function (e) {
-        //     e.preventDefault();
-        //     e.stopPropagation();
-        //     let index = view.container.find('.profile').last().data('index') + 1;
-        //     view.importProfile(preset_fr, index);
-        // });
 
         view.container.on('click','.delete-profile', function (e) {
             e.preventDefault();
@@ -185,7 +149,6 @@ SIM.PROFILES = {
         SIM.SETTINGS.buildSpells();
         SIM.SETTINGS.buildBuffs();
         SIM.SETTINGS.buildTalents();
-        SIM.SETTINGS.buildRunes();
         view.body.find('nav > ul > li.active > p').click();
 
         let storage = JSON.parse(localStorage[modei]);
@@ -228,15 +191,6 @@ SIM.PROFILES = {
             <div class="import-profile">${svgImport}<p>Import Profile</p></div>
             </div>`);
 
-        if (mode == "sod") {
-            view.presets.empty();
-            view.presets.append(`
-                <label>Presets:</label>
-                <div class="import-thaq">P6 2H BiS</div>
-                <div class="import-dwaq">P6 DW BiS</div>
-                <div class="import-thbwl">P5 2H BiS</div>
-                <div class="import-dwbwl">P5 DW BiS</div>`);
-        }
             
         },
 
@@ -269,17 +223,7 @@ SIM.PROFILES = {
     },
 
     getItemHTML(item, storage) {
-        let icon = '';
-        if (typeof storage.runes !== 'undefined' && storage.runes[item.slot]) {
-            for (let rune of storage.runes[item.slot]) {
-                if (rune.selected) {
-                    let r = runes[item.slot].filter(a => a.id == rune.id)[0];
-                    if (!r) rune.selected = false;
-                    else icon = `<img src="https://wow.zamimg.com/images/wow/icons/medium/${r.iconname}.jpg">`
-                }
-            }
-        }
-        let html = `<li data-quality="${item.q}"><p>${item.name}</p> ${icon}</li>`;
+        let html = `<li data-quality="${item.q}"><p>${item.name}</p></li>`;
         return html;
     },
 
@@ -370,11 +314,6 @@ SIM.PROFILES = {
                 if (typeof spell.secondarystance !== 'undefined') obj.secondarystance = spell.secondarystance;
                 minified.rotation.push(obj);
             }
-        }
-        minified.runes = {};
-        for (let type in storage.runes) {
-            for (let item of storage.runes[type])
-                if (item.selected) minified.runes[type] = item.id;
         }
         minified.enchant = {};
         for (let type in storage.enchant) {
@@ -469,10 +408,6 @@ SIM.PROFILES = {
                 else {
                     spell.active = false;
                 }
-            }
-            storage.runes = {};
-            for (let type in minified.runes) {
-                storage.runes[type] = [{id: minified.runes[type], selected: true}];
             }
             storage.enchant = {};
             for (let type in minified.enchant) {

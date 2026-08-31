@@ -9,7 +9,6 @@ SIM.SETTINGS = {
         view.buildSpells();
         view.buildBuffs();
         view.buildTalents();
-        view.buildRunes();
     },
 
     variables: function () {
@@ -20,7 +19,6 @@ SIM.SETTINGS = {
         view.rotation = view.body.find('article.rotation');
         view.talents = view.body.find('article.talents');
         view.filter = view.body.find('article.filter');
-        view.runes = view.body.find('article.runes');
         view.close = view.body.find('section.settings .btn-close');
         view.bg = view.body.find('section.sidebar .bg');
     },
@@ -181,12 +179,6 @@ SIM.SETTINGS = {
         view.talents.on('click', 'label', function (e) {
             var view = this;
             $(view.parentElement).find('table').toggleClass('hidden').end().find('#top').toggleClass('hidden top');
-            SIM.SETTINGS.toggleArticle(view);
-        });
-
-        view.runes.on('click', 'label', function (e) {
-            var view = this;
-            $(view.parentElement).find('div').toggleClass('hidden');
             SIM.SETTINGS.toggleArticle(view);
         });
 
@@ -380,7 +372,7 @@ SIM.SETTINGS = {
         let items = '';
         for (let spell of spells) {
 
-            if (spell.sod && mode !== "sod") {
+            if (spell.sod) {
                 spell.active = false;
                 continue;
             }
@@ -414,17 +406,7 @@ SIM.SETTINGS = {
             }
 
             // rune restrictions
-            let rune;
-            if (typeof runes !== 'undefined') {
-                for (let type in runes)
-                    for (let r of runes[type])
-                        if (r.enable == spell.id) rune = r;
-                if (rune && !rune.selected) {
-                    spell.active = false;
-                    continue;
-                }
-            }
-            else if (spell.rune) {
+            if (spell.rune) {
                 spell.active = false;
                 continue;
             }
@@ -671,23 +653,13 @@ SIM.SETTINGS = {
             }
 
             // sod restrictions
-            if (mode !== "sod" && buff.sod) {
+            if (buff.sod) {
                 buff.active = false;
                 continue;
             }
 
             // rune restrictions
-            let rune;
-            if (typeof runes !== 'undefined') {
-                for (let type in runes)
-                    for (let r of runes[type])
-                        if (r.enable == buff.id) rune = r;
-                if (rune && !rune.selected) {
-                    buff.active = false;
-                    continue;
-                }
-            }
-            else if (buff.rune) {
+            if (buff.rune) {
                 buff.active = false;
                 continue;
             }
@@ -742,67 +714,6 @@ SIM.SETTINGS = {
                 table.find('tr').eq(talent.y).children().eq(talent.x).append(div);
             }
             view.talents.append(table);
-        }
-    },
-
-    buildRunes: function () {
-        var view = this;
-        if (typeof runes === "undefined") return;
-        view.runes.find('#runes-area').empty();
-        for (let type in runes) {
-            for (let i in runes[type]) {
-                let rune = runes[type][i];
-                if (rune.enable && rune.selected) view.rotation.find('[data-id="' + rune.enable + '"]').removeClass('hidden');
-                if (rune.enable && !rune.selected) view.rotation.find('[data-id="' + rune.enable + '"]').addClass('hidden');
-
-                // Glad Stance
-                if (rune.selected && rune.gladstance) view.buffs.find('[data-id="' + rune.enable + '"]').removeClass('hidden');
-                if (!rune.selected && rune.gladstance) view.buffs.find('[data-id="' + rune.enable + '"]').addClass('hidden');
-            }
-        }
-        var type_of_runes = $('nav > ul > li').map(function() {
-            return $(this).data('type');
-          }).get();
-        for (let tree_name of type_of_runes) {
-            if (!runes.hasOwnProperty(tree_name)) {
-            } else {
-                let table = $('<table>');
-                let tbody = $('<tbody>');
-                let tree = $(`<tr name="${tree_name}">`)
-                for(let i = 0; i < runes[tree_name].length; i++) {
-                    let this_rune = runes[tree_name][i];
-                    let td = $('<td>');
-                    let rune_div = $(`<div data-id="${this_rune.id}" class="rune"></div>`);
-                    let sub_div = $(`<div class="icon ${this_rune.selected ? 'active' : ''}"></div>`);
-                    let tooltip = this_rune.id;
-                    if (tooltip == 413479) tooltip = 412513;
-                    sub_div.html(`<img src="https://wow.zamimg.com/images/wow/icons/medium/${this_rune.iconname}.jpg" alt="${this_rune.name}" />`);
-                    sub_div.append(`<a href="${WEB_DB_URL}spell=${tooltip}" class="wh-tooltip"></a>`);
-                    rune_div.append(sub_div);
-                    td.append(rune_div); 
-                    tree.append(td);
-                }
-                let tr = $('<tr>');
-                let tree_header = $(`<th style="text-align:left; padding-left: 4px;">${tree_name.toString().charAt(0).toUpperCase()}${tree_name.slice(1).toString().replace('1','')}</th>`)
-                tr.append(tree_header)
-                // if (tree_name == "legs")
-                //     tree.append('<td><div id="move" class="rune" style="position: absolute; z-index: 999; margin-top: -23px;"><div class="icon"><img src="https://wow.zamimg.com/images/wow/icons/medium/ability_warrior_titansgrip.jpg" alt="" /></div></div></td>');
-                
-                table.append(tr).append(tree);
-                tbody.append(table)
-                view.runes.find('#runes-area').append(tbody);
-
-                $("#move").mouseenter(function () {
-
-                    $(this).animate({
-                        top: Math.random() * 300
-                    }, 100);
-                    $(this).animate({
-                        left: Math.random() * 300
-                    }, 100);
-                
-                });
-            }
         }
     },
 

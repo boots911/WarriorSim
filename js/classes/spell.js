@@ -411,7 +411,7 @@ class ThunderClap extends Spell {
     }
     dmg() {
         let dmg;
-        dmg = this.value1 + (this.player.mode == "sod" ? ~~(this.player.stats.ap * 0.05) : 0);
+        dmg = this.value1;
         if(this.player.furiousthunder)
             dmg *= 2;
         return dmg * this.player.stats.dmgmod;
@@ -941,8 +941,8 @@ class Recklessness extends Aura {
     constructor(player, id) {
         super(player, id);
         this.duration = 12;
-        this.stats = { crit: this.player.mode == "sod" ? 50 : 100 };
-        this.cooldown = this.player.mode == "sod" ? 300 : 1800;
+        this.stats = { crit: 100 };
+        this.cooldown = 1800;
     }
     use() {
         if (this.timer) this.uptime += (step - this.starttimer);
@@ -1654,7 +1654,7 @@ class Earthstrike extends Aura {
     constructor(player, id) {
         super(player, id);
         this.duration = 20;
-        this.stats = { ap: this.player.mode == "sod" ? 328 : 280 };
+        this.stats = { ap: 280 };
     }
     use(a, prepull = 0) {
         this.player.itemtimer = this.duration * 1000 - prepull;
@@ -1673,7 +1673,7 @@ class Gabbar extends Aura {
         super(player, id);
         this.duration = 20;
         this.name = 'Jom Gabbar';
-        this.value = player.mode == "sod" ? 70 : 65;
+        this.value = 65;
         this.stats = { ap: this.value };
     }
     use(a, prepull = 0) {

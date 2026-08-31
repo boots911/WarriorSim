@@ -2192,7 +2192,6 @@ var session = {
             }
         ]
     },
-    "runes": {},
     "resistance": {
         "shadow": false,
         "arcane": false,

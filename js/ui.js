@@ -29,7 +29,6 @@ SIM.UI = {
         view.fight = view.body.find('article.fight');
         view.rotation = view.body.find('article.rotation');
         view.talents = view.body.find('article.talents');
-        view.runes = view.body.find('article.runes');
         view.filter = view.body.find('article.filter');
         view.main = view.body.find('section.main');
         view.sidebar = view.body.find('section.sidebar');
@@ -226,55 +225,6 @@ SIM.UI = {
             view.updateSession();
             view.updateSidebar();
             SIM.SETTINGS.buildSpells();
-        });
-
-        view.runes.on('click', '.rune .icon', function(e) {
-            e.preventDefault();
-            var current_open_page =  $(`nav`).children('ul').children('li.active').data('type');
-            var rune_type = $(this).closest('tr[name]').attr('name');
-            var rune_id = $(this).parent().attr('data-id').toString();;
-            view.loadGear(rune_type);
-            var parent = view.tcontainer.find($(`.runes[data-type="${rune_type}"]`));
-            var rune = parent.find($(`[data-id="${rune_id}"]`));
-            if (rune.hasClass('active')) {
-                view.rowDisableRunes(rune);
-            } else {
-                parent.children('div').each(function(index, element) {
-                    view.rowDisableRunes($(element));
-                });
-                view.rowEnableRunes(rune);
-            }
-            view.updateSession();
-            view.updateSidebar();
-            SIM.SETTINGS.buildSpells();
-            SIM.SETTINGS.buildBuffs();
-
-            if (current_open_page == "mainhand" || current_open_page == "offhand" || current_open_page == "twohand")
-                view.loadWeapons(current_open_page);
-            else if (current_open_page == "custom")
-                view.loadCustom();
-            else 
-                view.loadGear(current_open_page);
-        });
-
-        view.tcontainer.on('click', '.runes .icon', function(e) {
-            e.preventDefault();
-            var parent = $(this).parents('.runes');
-            var rune = $(this).parent();
-
-            if (rune.hasClass('active')) {
-                view.rowDisableRunes(rune);
-            }
-            else {
-                let disable = parent.find('.rune.active').first();
-                if (disable.length) view.rowDisableRunes(disable);
-                view.rowEnableRunes(rune);
-            }
-
-            view.updateSession();
-            view.updateSidebar();
-            SIM.SETTINGS.buildSpells();
-            SIM.SETTINGS.buildBuffs();
         });
 
         view.sidebar.find('.menu-button-container').click(function (e) {
@@ -700,60 +650,6 @@ SIM.UI = {
         }
     },
 
-    rowDisableRunes: function(div) {
-        var parent = div.parents('.runes');
-        var type = parent.data('type');
-        div.removeClass('active');
-        for(let i = 0; i < runes[type].length; i++) {
-            if (runes[type][i].id == div.data('id')) {
-                runes[type][i].selected = false;
-                if (runes[type][i].enable) {
-                    for (let spell of spells)
-                        if (spell.id == runes[type][i].enable)
-                            spell.active = false;
-                    for (let buff of buffs) {
-                        if (buff.id == runes[type][i].enable) 
-                            buff.active = false;
-                        if (buff.id == 2458 && runes[type][i].gladstance) 
-                            buff.active = true;
-                    }
-                        
-                }
-            }
-               
-        }
-        var settings_parent = this.body.find('article.runes');
-        var rune_lookup = $(`tr[name="${type}"]`);
-        settings_parent.find(rune_lookup).find('div').removeClass('active');
-    },
-
-    rowEnableRunes: function(div) {
-        var parent = div.parents('.runes');
-        var type = parent.data('type');
-        div.addClass('active');
-        let this_spell_id = 0;
-        for(let i = 0; i < runes[type].length; i++) {
-            if (runes[type][i].id == div.data('id')) {
-                runes[type][i].selected = true;
-                if (runes[type][i].enable) {
-                    for (let spell of spells)
-                        if (spell.id == runes[type][i].enable)
-                            spell.active = true;
-                    for (let buff of buffs) {
-                        if (buff.id == runes[type][i].enable)
-                            buff.active = true;
-                        if (runes[type][i].buffgroup && buff.group == runes[type][i].buffgroup && buff.id !== runes[type][i].enable)
-                            buff.active = false;
-                    }
-                }
-                this_spell_id = runes[type][i].id;
-            }
-        }
-        var settings_parent = this.body.find('article.runes');
-        var rune_lookup = $(`[data-id="${this_spell_id}"]`);
-        settings_parent.find(rune_lookup).children('div').addClass('active');
-    },
-
     startLoading: function() {
         let btns = $('.js-dps, .js-weights, .js-table, .js-enchant');
         btns.addClass('loading');
@@ -905,7 +801,7 @@ SIM.UI = {
         obj.spellqueueing = view.fight.find('select[name="spellqueueing"]').val();
         
 
-        let _buffs = [], _rotation = [], _talents = [], _sources = [], _phases = [], _gear = {}, _enchant = {}, _runes = {}, _resistance = {};
+        let _buffs = [], _rotation = [], _talents = [], _sources = [], _phases = [], _gear = {}, _enchant = {}, _resistance = {};
         view.buffs.find('.active').each(function () { _buffs.push($(this).attr('data-id')); });
         view.filter.find('.sources .active').each(function () { _sources.push($(this).attr('data-id')); });
         view.filter.find('.phases .active').each(function () { _phases.push($(this).attr('data-id')); });
@@ -933,15 +829,6 @@ SIM.UI = {
             }
         }
 
-        if (typeof runes !== "undefined") {
-            for (let type in runes) {
-                _runes[type] = [];
-                for (let item of runes[type]) {
-                    _runes[type].push({id:item.id,selected:item.selected,hidden:item.hidden});
-                }
-            }
-        }
-
         var resistances = ['shadow', 'arcane', 'nature', 'fire', 'frost'];
         for (let resist in resistances) {
             var element = resistances[resist];
@@ -955,7 +842,6 @@ SIM.UI = {
         obj.talents = _talents;
         obj.gear = _gear;
         obj.enchant = _enchant;
-        obj.runes = _runes;
         obj.resistance = _resistance;
         if (globalThis.profilename) obj.profilename = globalThis.profilename;
 
@@ -969,12 +855,6 @@ SIM.UI = {
 
         if (localStorage.level) localStorage.clear(); // clear old style of storage
         if (!localStorage[mode + profileid]) localStorage[mode + profileid] = JSON.stringify(session);
-
-        // update everyone for P4
-        if (mode == "sod" && localStorage.sodPatch !== "6") {
-            localStorage.sodPatch = "6";
-            localStorage.sod0 = JSON.stringify(session);
-        }
 
         let storage = JSON.parse(localStorage[mode + profileid]);
         if (!storage.level) storage.level = session.level;
@@ -1022,13 +902,11 @@ SIM.UI = {
             rotation: !storage.rotation ? session.rotation : storage.rotation,
             gear: !storage.gear ? session.gear : storage.gear,
             enchant: !storage.enchant ? session.enchant : storage.enchant,
-            runes: !storage.runes ? session.runes || {} : storage.runes,
             resistances: !storage.resistances ? null : storage.resistances,
         });
 
         let _sources = !storage.sources ? session.sources : storage.sources;
         let _phases = !storage.phases ? session.phases : storage.phases;
-        if (mode == "sod") _phases = ["1","2","3","4","5"];
 
         for (let i of _sources)
             view.filter.find(`.sources [data-id="${i}"]`).addClass('active');
@@ -1091,7 +969,7 @@ SIM.UI = {
 
         for (let item of gear[type]) {
 
-            if (!item.selected && (item.r > level || (mode == "sod" && item.q < 3 && item.i < (level - 7)) || (mode == "sod" && item.q == 3 && item.i < (level - 10)) || (mode == "sod" && item.q == 4 && item.i < (level - 15)))) {
+            if (!item.selected && item.r > level) {
                 continue;
             }
 
@@ -1264,7 +1142,7 @@ SIM.UI = {
 
         for (let item of gear[type]) {
             
-            if (!item.selected && (item.r > level || (mode == "sod" && item.q < 3 && item.i < (level - 7)) || (mode == "sod" && item.q == 3 && item.i < (level - 10)) || (mode == "sod" && item.q == 4 && item.i < (level - 15)))) {
+            if (!item.selected && item.r > level) {
                 continue;
             }
 
@@ -1347,7 +1225,6 @@ SIM.UI = {
         table += '</tbody></table></section>';
 
         view.tcontainer.empty();
-        view.loadRunes(type, editmode);
         view.tcontainer.append(`<div class="topgear">
             <div class="search"><input name="search" placeholder="Search" />${searchSVG}</div>
             <div class="filters">
@@ -1518,27 +1395,6 @@ SIM.UI = {
         });
 
         view.main.find('.js-enchant').show();
-    },
-
-    loadRunes: function (type, editmode) {
-        var view = this;
-
-        if (typeof runes === 'undefined' || !runes[type] || runes[type].length == 0) return;
-
-        let html = $(`<div class="runes" data-type="${type}" style="display: none"></div>`);
-        html.append('<label>Runes</label>')
-        for (let item of runes[type]) {
-
-            html.append(`
-                <div data-id="${item.id}" class="rune ${item.selected ? 'active' : ''}">
-                    <div class="icon">
-                        <img src="https://wow.zamimg.com/images/wow/icons/medium/${item.iconname}.jpg" alt="${item.name}">
-                        <a href="${WEB_DB_URL}spell=${item.id}" class="wh-tooltip"></a>
-                    </div>
-                </div>`);
-        }
-
-        view.tcontainer.append(html);
     },
 
     addAlert: function (msg) {
