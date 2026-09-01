@@ -810,6 +810,7 @@ SIM.OPTIMIZER = {
         let rows = '';
         for (const u of upgrades) {
             const delta = u.mean - baseResult.mean;
+            const pct = baseResult.mean ? delta / baseResult.mean * 100 : 0;
             const err = 1.96 * Math.sqrt((u.varmean || 0) + (baseResult.varmean || 0));
             const swaps = [];
             for (const slot of view.DISPLAY_SLOTS) {
@@ -825,7 +826,7 @@ SIM.OPTIMIZER = {
             rows += `<tr>
                 <td data-quality="${u.cand.item.q}"><a href="${WEB_DB_URL}item=${tooltip}" target="_blank">${u.cand.item.name}</a></td>
                 <td>${view.slotLabel(u.cand.slot)}</td>
-                <td class="${delta >= 0 ? 'p' : 'n'}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)} &plusmn; ${err.toFixed(1)}</td>
+                <td class="${delta >= 0 ? 'p' : 'n'}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)} &plusmn; ${err.toFixed(1)} <span class="opt-pct">${delta >= 0 ? '+' : ''}${pct.toFixed(2)}%</span></td>
                 <td class="opt-swaps">${swaps.length ? swaps.join('<br>') : ''}</td>
             </tr>`;
         }

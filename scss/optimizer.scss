@@ -230,6 +230,12 @@
 
             &.p { color: #1eff00; white-space: nowrap; }
             &.n { color: #ff4444; white-space: nowrap; }
+
+            .opt-pct {
+                opacity: 0.65;
+                font-size: 12px;
+                margin-left: 4px;
+            }
         }
 
         .opt-swaps {
