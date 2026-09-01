@@ -76,6 +76,19 @@ SIM.OPTIMIZER = {
                 SIM.UI.addAlert('Set equipped');
             }
         });
+
+        view.section.on('click', '.opt-sources li', function (e) {
+            e.preventDefault();
+            $(this).addClass('active').siblings().removeClass('active');
+        });
+
+        view.section.on('click', '.js-run-finder', function (e) {
+            e.preventDefault();
+            if (view.running) return;
+            const bucket = view.section.find('.opt-sources li.active').data('id');
+            if (!bucket) { view.setFinderStatus('Pick a source first.'); return; }
+            view.runFinder(bucket);
+        });
     },
 
     // ---------- pools ----------
@@ -336,18 +349,70 @@ SIM.OPTIMIZER = {
 
     // ---------- main flow ----------
 
-    run: async function () {
+    ownedKey: function () {
+        return [...this.ownedIds()].sort().join(',');
+    },
+
+    beginRun: function () {
         const view = this;
         view.running = true;
         view.cancelled = false;
-        view.results.empty();
-        view.finalists = null;
-        view.section.find('.js-run-optimizer').addClass('disabled');
+        view.section.find('.js-run-optimizer, .js-run-finder').addClass('disabled');
         view.section.find('.js-cancel-optimizer').show();
         view.playerConfig = Player.getConfig();
         view.simConfig = Simulation.getConfig();
+    },
+
+    endRun: function () {
+        const view = this;
+        view.running = false;
+        view.setProgress(0, 0);
+        view.section.find('.js-run-optimizer, .js-run-finder').removeClass('disabled');
+        view.section.find('.js-cancel-optimizer').hide();
+        if (view._pool) { view._pool.terminate(); view._pool = null; }
+    },
+
+    run: async function () {
+        const view = this;
+        view.beginRun();
+        view.results.empty();
+        view.finalists = null;
+        view.lastRun = null;
 
         try {
+            await view.ensureBestSets();
+            view.setStatus(`Done. Evaluated ${view.spaceSize} combinations.`);
+        }
+        catch (err) {
+            if (err === 'cancelled') view.setStatus('Cancelled.');
+            else view.setStatus('' + err);
+        }
+        finally {
+            view.endRun();
+        }
+    },
+
+    // Compute and cache the best-sets result; reused by the upgrade finder.
+    ensureBestSets: async function () {
+        const view = this;
+        const key = view.ownedKey();
+        if (view.lastRun && view.lastRun.key === key) return view.lastRun;
+        const result = await view.computeBestSets();
+        view.finalists = result.candidates.slice(0, 3);
+        view.renderResults(result.baseline);
+        view.setStatus(`Done. Evaluated ${view.spaceSize} combinations.`);
+        view.lastRun = {
+            key,
+            baseline: result.baseline,
+            best: result.candidates[0],
+            finalists: result.candidates.slice(0, 16),
+        };
+        return view.lastRun;
+    },
+
+    computeBestSets: async function () {
+        const view = this;
+        {
             const pools = view.buildPools();
             const owned = view.ownedIds();
             const baseline = view.currentGearMap();
@@ -461,20 +526,7 @@ SIM.OPTIMIZER = {
                 candidates.sort((a, b) => b.mean - a.mean);
             }
 
-            view.finalists = candidates.slice(0, 3);
-            view.renderResults(baseline);
-            view.setStatus(`Done. Evaluated ${view.spaceSize} combinations.`);
-        }
-        catch (err) {
-            if (err === 'cancelled') view.setStatus('Cancelled.');
-            else view.setStatus('' + err);
-        }
-        finally {
-            view.running = false;
-            view.setProgress(0, 0);
-            view.section.find('.js-run-optimizer').removeClass('disabled');
-            view.section.find('.js-cancel-optimizer').hide();
-            if (view._pool) { view._pool.terminate(); view._pool = null; }
+            return { candidates, baseline };
         }
     },
 
@@ -546,5 +598,242 @@ SIM.OPTIMIZER = {
         SIM.UI.updateSidebar();
         SIM.SETTINGS.buildSpells();
         SIM.UI.filterGear();
+    },
+
+    // ---------- upgrade finder ----------
+
+    FINDER_SLOTS: null, // set lazily: armor slots + finger1/trinket1 + weapons
+
+    setFinderStatus: function (msg) {
+        this.section.find('.opt-finder-status').text(msg);
+    },
+
+    // same source bucket mapping the gear tables use for the sidebar filter
+    sourceBucket: function (item) {
+        let source = (item.source || '').toLowerCase();
+        if (item.source == 'Lethon' || item.source == 'Emeriss' || item.source == 'Kazzak' || item.source == 'Azuregos' ||
+            item.source == 'Ysondre' || item.source == 'Taerar' || item.source == 'Green Dragons')
+            source = 'worldboss';
+        if (item.subsource == 'shadow' || item.subsource == 'arcane' || item.subsource == 'nature' ||
+            item.subsource == 'fire' || item.subsource == 'frost')
+            source = 'resistances-list';
+        if (source == 'world drop' || source == 'other' || source == 'ubrs' || source == 'pyroguard emberseer' ||
+            source == 'lord incendius' || source == 'goraluk anvilcrack' || source == 'maleki the pallid')
+            source = source == 'world drop' ? 'other' : (source == 'other' ? 'other' : 'dungeon');
+        return source;
+    },
+
+    upgradeCandidates: function (bucket) {
+        const view = this;
+        const owned = view.ownedIds();
+        const filter = $('article.filter');
+        const storage = JSON.parse(localStorage[mode + (globalThis.profileid || 0)]);
+        const level = parseInt(storage.level);
+        const out = [];
+        const searchSlots = [...view.ARMOR_SLOTS, 'finger1', 'trinket1', 'mainhand', 'offhand', 'twohand'];
+        for (const slot of searchSlots) {
+            for (const item of gear[slot]) {
+                if (owned.has(String(item.id))) continue;
+                if (item.hidden) continue;
+                if (item.r > level) continue;
+                if (view.sourceBucket(item) != bucket) continue;
+                const phase = item.phase;
+                if (phase && !filter.find('.phases [data-id="' + phase + '"]').hasClass('active')) continue;
+                out.push({ item, slot });
+            }
+        }
+        return out;
+    },
+
+    placePiece: function (gearmap, pid, slots, protectedIds) {
+        // skip if already placed anywhere it can go
+        for (const s of slots)
+            if (gearmap[s] && String(gearmap[s][0]) == String(pid)) return;
+        for (const s of slots) {
+            const cur = gearmap[s] && gearmap[s][0];
+            if (protectedIds.has(String(cur))) continue;
+            gearmap[s] = [pid];
+            if (s == 'mainhand' || s == 'offhand') delete gearmap.twohand;
+            if (s == 'twohand') { delete gearmap.mainhand; delete gearmap.offhand; }
+            return;
+        }
+    },
+
+    insertionVariants: function (cand, baseMaps, pools) {
+        const view = this;
+        const cid = cand.item.id;
+        const out = new Map();
+        const keyOf = (m) => view.DISPLAY_SLOTS.map(s => (m[s] || []).map(String).sort().join('/')).join('|');
+        const push = (m) => { out.set(keyOf(m), m); };
+        const clone = (bm) => { const m = {}; for (const s in bm) if (bm[s] && bm[s][0] != null) m[s] = bm[s].slice(); return m; };
+
+        for (const bm of baseMaps) {
+            if (view.ARMOR_SLOTS.includes(cand.slot)) {
+                const m = clone(bm);
+                m[cand.slot] = [cid];
+                push(m);
+            }
+            else if (cand.slot == 'finger1' || cand.slot == 'trinket1') {
+                const a = cand.slot.replace('1', '') + '1', b = cand.slot.replace('1', '') + '2';
+                for (const s of [a, b]) {
+                    const other = s == a ? b : a;
+                    const m = clone(bm);
+                    if (m[other] && String(m[other][0]) == String(cid)) continue;
+                    m[s] = [cid];
+                    push(m);
+                }
+            }
+            else if (cand.slot == 'mainhand') {
+                const m = clone(bm);
+                m.mainhand = [cid];
+                delete m.twohand;
+                if (m.offhand && String(m.offhand[0]) == String(cid)) delete m.offhand;
+                if (!m.offhand && pools.offhand.length) m.offhand = [pools.offhand[0].id];
+                push(m);
+            }
+            else if (cand.slot == 'offhand') {
+                const m = clone(bm);
+                m.offhand = [cid];
+                delete m.twohand;
+                if (!m.mainhand || String(m.mainhand[0]) == String(cid)) {
+                    const mh = pools.mainhand.find(i => String(i.id) != String(cid));
+                    if (!mh) continue;
+                    m.mainhand = [mh.id];
+                }
+                push(m);
+            }
+            else if (cand.slot == 'twohand') {
+                const m = clone(bm);
+                m.twohand = [cid];
+                delete m.mainhand;
+                delete m.offhand;
+                push(m);
+            }
+        }
+
+        // if the candidate belongs to a set the player owns pieces of, also try
+        // completing that set on top of the inserted variants
+        const owned = view.ownedIds();
+        const slotIndex = view.itemSlotIndex();
+        for (const set of sets) {
+            if (!set.items.some(i => i == cid)) continue;
+            const ownedPieces = set.items.filter(i => owned.has(String(i)) && i != cid);
+            if (!ownedPieces.length) continue;
+            const protectedIds = new Set([String(cid)]);
+            for (const m0 of [...out.values()].slice(0, 8)) {
+                const m = clone(m0);
+                for (const pid of ownedPieces) {
+                    const entry = slotIndex[pid];
+                    if (!entry) continue;
+                    view.placePiece(m, pid, entry.slots, protectedIds);
+                    protectedIds.add(String(pid));
+                }
+                push(m);
+            }
+        }
+
+        return [...out.values()];
+    },
+
+    runFinder: async function (bucket) {
+        const view = this;
+        view.beginRun();
+        const table = view.section.find('.opt-finder-results');
+        table.empty();
+
+        try {
+            view.setFinderStatus('Computing baseline best set from bags...');
+            const base = await view.ensureBestSets();
+            const pools = view.buildPools();
+
+            const cands = view.upgradeCandidates(bucket);
+            if (!cands.length) throw 'No candidate items for this source (check the phase filters in Settings).';
+
+            const baseMaps = base.finalists.slice(0, cands.length > 40 ? 8 : 16).map(f => f.gearmap);
+            let combos = [];
+            for (const cand of cands) {
+                const variants = view.insertionVariants(cand, baseMaps, pools);
+                for (const gearmap of variants) combos.push({ gearmap, cand });
+            }
+            if (!combos.length) throw 'No viable combinations for these candidates.';
+
+            const keepBestPerCand = (list, n) => {
+                const byCand = new Map();
+                for (const c of list) {
+                    if (!byCand.has(c.cand)) byCand.set(c.cand, []);
+                    byCand.get(c.cand).push(c);
+                }
+                const out = [];
+                for (const [, arr] of byCand) {
+                    arr.sort((a, b) => b.mean - a.mean);
+                    out.push(...arr.slice(0, n));
+                }
+                return out;
+            };
+
+            const simRound = async (list, iters, label) => {
+                view.setFinderStatus(`${label}: simming ${list.length} variants at ${iters} iterations...`);
+                const res = await view.batch(list, iters, (d, t) => view.setProgress(d, t));
+                for (let i = 0; i < list.length; i++) Object.assign(list[i], res[i]);
+                return list.filter(c => !c.error);
+            };
+
+            combos = await simRound(combos, 150, 'Round 1');
+            combos = keepBestPerCand(combos, 2);
+            combos = await simRound(combos, 1500, 'Round 2');
+            combos = keepBestPerCand(combos, 1);
+
+            const fullIters = Math.min(Math.max(parseInt(view.simConfig.iterations) || 10000, 1000), 10000);
+            const baselineCombo = { gearmap: base.best.gearmap, cand: null };
+            const finals = await simRound([baselineCombo, ...combos], fullIters, 'Final');
+
+            const baseResult = finals.find(c => c.cand === null);
+            const upgrades = finals.filter(c => c.cand !== null);
+            upgrades.sort((a, b) => b.mean - a.mean);
+            view.renderFinder(bucket, baseResult, upgrades);
+            view.setFinderStatus(`Done. Baseline (best owned set): ${baseResult.mean.toFixed(1)} DPS at ${fullIters} iterations.`);
+        }
+        catch (err) {
+            if (err === 'cancelled') view.setFinderStatus('Cancelled.');
+            else view.setFinderStatus('' + err);
+        }
+        finally {
+            view.endRun();
+        }
+    },
+
+    renderFinder: function (bucket, baseResult, upgrades) {
+        const view = this;
+        const slotIndex = view.itemSlotIndex();
+        const baseIds = new Set(view.comboIds(baseResult.gearmap).map(String));
+
+        let rows = '';
+        for (const u of upgrades) {
+            const delta = u.mean - baseResult.mean;
+            const err = 1.96 * Math.sqrt((u.varmean || 0) + (baseResult.varmean || 0));
+            const swaps = [];
+            for (const slot of view.DISPLAY_SLOTS) {
+                const ids = (u.gearmap[slot] || []).filter(id => id != null);
+                for (const id of ids) {
+                    if (String(id) == String(u.cand.item.id)) continue;
+                    if (baseIds.has(String(id))) continue;
+                    const entry = slotIndex[id];
+                    swaps.push(`${view.slotLabel(slot)} &rarr; ${entry ? entry.item.name : id}`);
+                }
+            }
+            const tooltip = String(u.cand.item.id).split('|')[0];
+            rows += `<tr>
+                <td data-quality="${u.cand.item.q}"><a href="${WEB_DB_URL}item=${tooltip}" target="_blank">${u.cand.item.name}</a></td>
+                <td>${view.slotLabel(u.cand.slot)}</td>
+                <td class="${delta >= 0 ? 'p' : 'n'}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)} &plusmn; ${err.toFixed(1)}</td>
+                <td class="opt-swaps">${swaps.length ? swaps.join('<br>') : ''}</td>
+            </tr>`;
+        }
+
+        view.section.find('.opt-finder-results').html(`
+            <table class="opt-finder-table">
+                <thead><tr><th>Item</th><th>Slot</th><th>&Delta;DPS</th><th>Also swap (re-optimized)</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`);
     },
 };
