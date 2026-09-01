@@ -1134,6 +1134,18 @@ var gear = {
   ],
   "back": [
     {
+      "name": "Shadow Prowler's Cloak",
+      "source": "Crafting",
+      "ac": 45,
+      "agi": 17,
+      "sta": 7,
+      "phase": 4,
+      "id": 22269,
+      "q": "3",
+      "i": "63",
+      "p": "inv_misc_cape_20"
+    },
+    {
       "name": "Wildfire Cape",
       "source": "Pyroguard Emberseer",
       "ac": 43,
@@ -1980,6 +1992,19 @@ var gear = {
     }
   ],
   "wrist": [
+    {
+      "name": "Primal Batskin Bracers",
+      "source": "Crafting",
+      "ac": 79,
+      "agi": 14,
+      "sta": 7,
+      "hit": 1,
+      "phase": 3,
+      "id": 19687,
+      "q": "3",
+      "i": "65",
+      "p": "inv_bracer_07"
+    },
     {
       "name": "Dark Iron Bracer",
       "source": "Crafting",
