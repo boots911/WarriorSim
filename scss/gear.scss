@@ -353,10 +353,10 @@ section.main {
 
 
     @include tablet {
-        th:not(:nth-child(2)):not(:first-child):not(:last-child) {
+        th:not(:nth-child(3)):not(:first-child):not(:last-child) {
             display: none;
         }
-        td:not(:nth-child(2)):not(:first-child):not(:last-child) {
+        td:not(:nth-child(3)):not(:first-child):not(:last-child) {
             display: none;
         }
     }

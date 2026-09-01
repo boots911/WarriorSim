@@ -264,7 +264,7 @@ SIM.UI = {
             e.preventDefault();
             if (e.key == "Escape") $(this).val('');
             let val = $(this).val();
-            view.tcontainer.find('.gear td:nth-child(2)').each(function() {
+            view.tcontainer.find('.gear td.name').each(function() {
                 let td = $(this).get(0);
                 if (!val || td.textContent.toLowerCase().indexOf(val.toLowerCase()) > -1) td.parentElement.classList.remove('filtered');
                 else td.parentElement.classList.add('filtered');
@@ -1075,7 +1075,7 @@ SIM.UI = {
                         <td class="bag ${item.owned ? 'owned' : ''}">${bagsvg}</td>
                         ${editmode ? '<td class="hide">' + (item.hidden ? eyesvghidden : eyesvg) + '</td>' : ''}
                         <td data-quality="${item.q}"><a href="${WEB_DB_URL}item=${tooltip}${rand}"></a>${item.i}</td>
-                        <td>${item.name}</td>`
+                        <td class="name">${item.name}</td>`
 
             table +=`<td>${item.sta || ''}</td>
                         <td>${resist || ''}</td>
@@ -1242,7 +1242,7 @@ SIM.UI = {
                         <td class="bag ${item.owned ? 'owned' : ''}">${bagsvg}</td>
                         ${editmode ? '<td class="hide">' + (item.hidden ? eyesvghidden : eyesvg) + '</td>' : ''}
                         <td data-quality="${item.q}"><a href="${WEB_DB_URL}item=${tooltip}${rand}"></a>${item.i}</td>
-                        <td>${item.name}</td>`
+                        <td class="name">${item.name}</td>`
 
             table += `<td>${item.sta || ''}</td>
                         <td>${resist || ''}</td>
